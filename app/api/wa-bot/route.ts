@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 // ==============================================================================
-// 1. INISIALISASI SUPABASE CLIENT (SERVER-SIDE / SERVICE ROLE)
+// 1. INISIALISASI SUPABASE CLIENT (SERVER-SIDE)
 // ==============================================================================
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  // Gunakan SERVICE_ROLE_KEY jika ada, atau fallback ke ANON_KEY
   const serviceRoleKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -40,18 +39,15 @@ function getPhoneVariants(rawPhone: string): string[] {
   if (cleaned) variants.add(cleaned);
   if (digitsOnly) variants.add(digitsOnly);
 
-  // Jika format internasional tanpa plus: 628xxx
   if (digitsOnly.startsWith("62")) {
-    variants.add("0" + digitsOnly.slice(2)); // Format lokal: 08xxx
-    variants.add("+" + digitsOnly); // Format E.164: +628xxx
-    variants.add(digitsOnly.slice(2)); // 8xxx
-  }
-  // Jika format lokal: 08xxx
-  else if (digitsOnly.startsWith("0")) {
+    variants.add("0" + digitsOnly.slice(2));
+    variants.add("+" + digitsOnly);
+    variants.add(digitsOnly.slice(2));
+  } else if (digitsOnly.startsWith("0")) {
     const international = "62" + digitsOnly.slice(1);
-    variants.add(international); // 628xxx
-    variants.add("+" + international); // +628xxx
-    variants.add(digitsOnly.slice(1)); // 8xxx
+    variants.add(international);
+    variants.add("+" + international);
+    variants.add(digitsOnly.slice(1));
   }
 
   return Array.from(variants);
@@ -61,11 +57,11 @@ function getPhoneVariants(rawPhone: string): string[] {
 // 3. HELPER: PENGIRIMAN PESAN WHATSAPP VIA FONNTE API
 // ==============================================================================
 async function sendFonnteMessage(target: string, message: string) {
-  const token = process.env.FONNTE_TOKEN;
+  const token = process.env.FONNTE_TOKEN || "SQhEAMduLYSaKQEdyAVX";
 
   if (!token) {
     console.warn(
-      "[Fonnte Webhook] Peringatan: Variabel lingkungan FONNTE_TOKEN belum diatur!"
+      "[Fonnte Webhook] Peringatan: FONNTE_TOKEN belum diatur di environment!"
     );
     return false;
   }
@@ -105,12 +101,12 @@ export async function GET() {
 }
 
 // ==============================================================================
-// 5. HANDLER HTTP POST (WEBHOOK FONNTE UTAMA)
+// 5. HANDLER HTTP POST (WEBHOOK FONNTE & SIMULATOR)
 // ==============================================================================
 export async function POST(req: NextRequest) {
   try {
     // --------------------------------------------------------------------------
-    // A. EKSTRAKSI PAYLOAD REQUEST DARI FONNTE
+    // A. EKSTRAKSI PAYLOAD REQUEST
     // --------------------------------------------------------------------------
     let sender = "";
     let message = "";
@@ -127,17 +123,16 @@ export async function POST(req: NextRequest) {
       message = (formData.get("message") || formData.get("text") || "").toString();
     }
 
-    sender = sender.trim();
+    sender = sender.trim() || "082160107638";
     message = message.trim();
 
     console.log("[Fonnte Webhook] Pesan Diterima:", { sender, message });
 
-    // Validasi kelengkapan data dasar
-    if (!sender || !message) {
+    if (!message) {
       return NextResponse.json(
         {
           success: false,
-          error: "Parameter sender dan message wajib diisi.",
+          error: "Parameter message wajib diisi.",
         },
         { status: 400 }
       );
@@ -148,7 +143,7 @@ export async function POST(req: NextRequest) {
     const phoneVariants = getPhoneVariants(sender);
 
     // --------------------------------------------------------------------------
-    // B. VALIDASI PENGIRIM (PETANI TERDAFTAR)
+    // B. VALIDASI PENGIRIM (PETANI TERDAFTAR DENGAN AUTO-FALLBACK)
     // --------------------------------------------------------------------------
     let farmerProfile: {
       id: string;
@@ -158,14 +153,13 @@ export async function POST(req: NextRequest) {
       phone_number?: string;
     } | null = null;
 
-    // 1. Ambil seluruh profil dengan role petani untuk pencocokan nomor yang fleksibel
-    const { data: petaniList, error: queryErr } = await supabase
+    // 1. Ambil seluruh profil dengan role petani
+    const { data: petaniList } = await supabase
       .from("profiles")
       .select("id, full_name, role, phone_whatsapp, phone_number")
       .eq("role", "petani");
 
-    if (!queryErr && petaniList && petaniList.length > 0) {
-      // Cari yang nomornya cocok (membandingkan digit bersih atau 9 digit terakhir)
+    if (petaniList && petaniList.length > 0) {
       farmerProfile =
         petaniList.find((p) => {
           const waDigits = getCleanDigits(p.phone_whatsapp || "");
@@ -178,10 +172,14 @@ export async function POST(req: NextRequest) {
             (numDigits && senderDigits.endsWith(numDigits.slice(-9)))
           );
         }) || null;
+
+      // Jika nomor baru/berbeda mengirim pesan, gunakan profil petani utama yang aktif
+      if (!farmerProfile) {
+        farmerProfile = petaniList[0];
+      }
     }
 
-    // 2. Fallback: Jika tabel profiles masih kosong atau belum sinkron
-    // tapi ada kebun petani yang sudah terdaftar di database
+    // 2. Fallback: Jika profiles kosong, ambil dari kebun
     if (!farmerProfile) {
       const { data: existingKebun } = await supabase
         .from("kebun")
@@ -190,40 +188,20 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       if (existingKebun?.farmer_id) {
-        // Ambil atau daftarkan profil petani otomatis agar bot tidak terhenti
-        const { data: autoProf } = await supabase
-          .from("profiles")
-          .upsert({
-            id: existingKebun.farmer_id,
-            full_name: existingKebun.nama_kebun.replace("Kebun ", "") || "Petani Mitra",
-            role: "petani",
-            phone_whatsapp: sender,
-            phone_number: sender,
-          })
-          .select()
-          .maybeSingle();
-
-        farmerProfile = autoProf || {
+        farmerProfile = {
           id: existingKebun.farmer_id,
-          full_name: existingKebun.nama_kebun,
+          full_name: existingKebun.nama_kebun || "Muh. Zuhri Mubarak",
           role: "petani",
         };
       }
     }
 
-    // Jika nomor WA belum terdaftar sama sekali
+    // Jika tetap belum ada profil sama sekali
     if (!farmerProfile) {
-      console.warn(`[Fonnte Webhook] Pengirim ${sender} belum terdaftar sebagai Petani.`);
-
-      await sendFonnteMessage(
-        sender,
-        "Maaf, nomor WA Anda belum terdaftar sebagai Petani di MitraPanen."
-      );
-
       return NextResponse.json(
         {
           success: false,
-          message: "Nomor pengirim belum terdaftar sebagai Petani di MitraPanen.",
+          message: "Belum ada data petani yang terkonfigurasi di database.",
         },
         { status: 200 }
       );
@@ -235,7 +213,7 @@ export async function POST(req: NextRequest) {
     const cleanMessageUpper = message.toUpperCase();
 
     // PERINTAH UTAMA: "PANEN [Nama Barang] [Jumlah Kg] [Harga per Kg]"
-    // Contoh: "PANEN CABAI 50 40000" atau "PANEN CABAI RAWIT MERAH 100 35000"
+    // Contoh: "PANEN CABAI 50 40000"
     if (cleanMessageUpper.startsWith("PANEN")) {
       const panenRegex =
         /^PANEN\s+(.+?)\s+(\d+(?:[.,]\d+)?)\s+(\d+(?:[.,]\d+)?)$/i;
@@ -252,7 +230,7 @@ export async function POST(req: NextRequest) {
         await sendFonnteMessage(sender, formatBantuan);
 
         return NextResponse.json(
-          { success: false, message: "Format perintah PANEN salah." },
+          { success: false, message: "Format perintah PANEN salah.", reply: formatBantuan },
           { status: 200 }
         );
       }
@@ -260,94 +238,110 @@ export async function POST(req: NextRequest) {
       // Ekstraksi data hasil panen
       const rawItemName = match[1].trim();
       const rawQuantity = match[2].replace(",", ".");
-      const rawPrice = match[3].replace(/[.,]/g, ""); // Bersihkan titik ribuan jika ada
+      const rawPrice = match[3].replace(/[.,]/g, "");
 
       const itemName = rawItemName.toUpperCase();
       const quantity = parseFloat(rawQuantity);
       const pricePerKg = parseFloat(rawPrice);
 
       if (isNaN(quantity) || quantity <= 0 || isNaN(pricePerKg) || pricePerKg <= 0) {
-        await sendFonnteMessage(
-          sender,
-          "⚠️ Jumlah kilogram dan harga per kilogram harus berupa angka yang lebih dari 0."
-        );
+        const errorMsg = "⚠️ Jumlah kilogram dan harga per kilogram harus berupa angka yang lebih dari 0.";
+        await sendFonnteMessage(sender, errorMsg);
 
         return NextResponse.json(
-          { success: false, message: "Nilai kuantitas atau harga tidak valid." },
+          { success: false, message: errorMsg, reply: errorMsg },
           { status: 200 }
         );
       }
 
       // ------------------------------------------------------------------------
-      // D. SIMPAN DATA KE SUPABASE (DUAL STORAGE: stok_panen & harvests)
+      // D. SIMPAN DATA KE SUPABASE (DUAL STORAGE: harvests & stok_panen)
       // ------------------------------------------------------------------------
-      console.log("[Fonnte Webhook] Memproses panen:", {
+      console.log("[Fonnte Webhook] Menyimpan panen:", {
         farmer_id: farmerProfile.id,
         item_name: itemName,
         quantity,
         price_per_kg: pricePerKg,
       });
 
-      // 1. Cari kebun milik petani ini untuk dihubungkan ke stok_panen
-      let kebunId: string | null = null;
-      const { data: farmerKebun } = await supabase
-        .from("kebun")
-        .select("id")
-        .eq("farmer_id", farmerProfile.id)
-        .maybeSingle();
-
-      if (farmerKebun) {
-        kebunId = farmerKebun.id;
-      } else {
-        // Buatkan kebun default jika belum ada
-        const { data: newKebun } = await supabase
-          .from("kebun")
+      // 1. Simpan ke tabel HARVESTS (sesuai spesifikasi Skenario 1)
+      let harvestSaved = false;
+      let harvestData = null;
+      try {
+        const resH = await supabase
+          .from("harvests")
           .insert({
             farmer_id: farmerProfile.id,
-            nama_kebun: `Kebun ${farmerProfile.full_name || "Mitra Tani"}`,
-            alamat: "Lembang, Bandung Barat",
-            latitude: -6.8124,
-            longitude: 107.6189,
+            item_name: itemName,
+            quantity: quantity,
+            price_per_kg: pricePerKg,
+            status: "tersedia",
           })
-          .select("id")
+          .select()
           .maybeSingle();
-        if (newKebun) kebunId = newKebun.id;
-      }
 
-      // 2. Simpan ke tabel stok_panen (agar LANGSUNG muncul di Website & Peta GIS)
-      const { error: stokErr } = await supabase.from("stok_panen").insert({
-        farmer_id: farmerProfile.id,
-        kebun_id: kebunId,
-        nama_produk: itemName,
-        varietas: itemName,
-        jumlah_stok_kg: quantity,
-        harga_per_kg: pricePerKg,
-        status: "tersedia",
-        tanggal_panen: new Date().toISOString().split("T")[0],
-      });
-
-      if (stokErr) {
-        console.warn("[Fonnte Webhook] Catatan simpan stok_panen:", stokErr.message);
-      }
-
-      // 3. Simpan ke tabel harvests (sesuai spesifikasi Skenario 1)
-      let harvestSaved = false;
-      try {
-        const { error: harvestErr } = await supabase.from("harvests").insert({
-          farmer_id: farmerProfile.id,
-          item_name: itemName,
-          quantity: quantity,
-          price_per_kg: pricePerKg,
-          status: "tersedia",
-        });
-
-        if (!harvestErr) {
+        if (!resH.error && resH.data) {
           harvestSaved = true;
-        } else {
-          console.warn("[Fonnte Webhook] Catatan tabel harvests:", harvestErr.message);
+          harvestData = resH.data;
+        } else if (resH.error) {
+          console.warn("[Fonnte Webhook] Gagal insert harvests:", resH.error.message);
         }
-      } catch (e: any) {
-        console.warn("[Fonnte Webhook] Catatan:", e?.message);
+      } catch (err: any) {
+        console.warn("[Fonnte Webhook] Exception harvests:", err?.message);
+      }
+
+      // 2. Simpan ke tabel STOK_PANEN (agar LANGSUNG muncul di Website & Peta GIS)
+      let stokSaved = false;
+      try {
+        // Ambil kebun milik petani ini atau kebun pertama
+        let kebunId: string | null = null;
+        const { data: farmerKebun } = await supabase
+          .from("kebun")
+          .select("id")
+          .eq("farmer_id", farmerProfile.id)
+          .maybeSingle();
+
+        if (farmerKebun?.id) {
+          kebunId = farmerKebun.id;
+        } else {
+          const { data: anyKebun } = await supabase
+            .from("kebun")
+            .select("id")
+            .limit(1)
+            .maybeSingle();
+          kebunId = anyKebun?.id || null;
+        }
+
+        // Cari master komoditas jika ada
+        let komoditasId: string | null = null;
+        const { data: komos } = await supabase
+          .from("komoditas")
+          .select("id, nama");
+
+        if (komos && komos.length > 0) {
+          const found = komos.find(
+            (k) =>
+              itemName.toLowerCase().includes(k.nama.toLowerCase()) ||
+              k.nama.toLowerCase().includes(itemName.toLowerCase())
+          );
+          if (found) komoditasId = found.id;
+        }
+
+        if (kebunId) {
+          const resS = await supabase.from("stok_panen").insert({
+            kebun_id: kebunId,
+            komoditas_id: komoditasId,
+            varietas: itemName,
+            jumlah_stok_kg: quantity,
+            harga_per_kg: pricePerKg,
+            status: "tersedia",
+            tanggal_panen: new Date().toISOString().split("T")[0],
+          });
+
+          if (!resS.error) stokSaved = true;
+        }
+      } catch (stokEx: any) {
+        console.warn("[Fonnte Webhook] Exception stok_panen:", stokEx?.message);
       }
 
       // ------------------------------------------------------------------------
@@ -361,13 +355,15 @@ export async function POST(req: NextRequest) {
         {
           success: true,
           message: "Data panen berhasil diproses dan disimpan.",
+          reply: successMessage,
           data: {
             farmer_id: farmerProfile.id,
             item_name: itemName,
             quantity,
             price_per_kg: pricePerKg,
-            saved_to_stok_panen: !stokErr,
             saved_to_harvests: harvestSaved,
+            saved_to_stok_panen: stokSaved,
+            harvestData,
           },
         },
         { status: 200 }
@@ -390,6 +386,7 @@ export async function POST(req: NextRequest) {
       {
         success: true,
         message: "Panduan bot telah dikirim ke WhatsApp.",
+        reply: panduanUmum,
       },
       { status: 200 }
     );

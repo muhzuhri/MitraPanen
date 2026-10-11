@@ -19,7 +19,7 @@ export default function WhatsAppSimulator({ farmerName }: WhatsAppSimulatorProps
     },
   ]);
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputVal.trim()) return;
 
@@ -36,31 +36,38 @@ export default function WhatsAppSimulator({ farmerName }: WhatsAppSimulatorProps
     setMessages(newMsgs);
     setInputVal("");
 
-    // Simulate smart bot response
-    setTimeout(() => {
-      const upper = userText.toUpperCase();
-      let botReply =
-        "🌾 Format perintah tidak dikenali. Ketik 'BANTUAN' untuk melihat daftar format perintah yang tersedia.";
+    try {
+      // Panggil API Webhook secara nyata sehingga data langsung tersimpan ke Supabase
+      const res = await fetch("/api/wa-bot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sender: "082160107638",
+          message: userText,
+        }),
+      });
 
-      if (upper.startsWith("PANEN")) {
-        botReply = MOCK_BOT_RESPONSES.PANEN;
-      } else if (upper.startsWith("HABIS")) {
-        botReply = MOCK_BOT_RESPONSES.HABIS;
-      } else if (upper.includes("PESANAN") || upper.includes("CEK")) {
-        botReply = MOCK_BOT_RESPONSES.CEK;
-      } else if (upper.includes("HARGA")) {
-        botReply = MOCK_BOT_RESPONSES.HARGA;
-      } else if (upper.includes("SIAP")) {
-        botReply = MOCK_BOT_RESPONSES.SIAP;
-      } else if (upper.includes("BANTUAN") || upper.includes("HALO")) {
-        botReply = MOCK_BOT_RESPONSES.BANTUAN;
-      }
+      const data = await res.json();
+      const botReply =
+        data.reply ||
+        (data.success
+          ? `✅ Berhasil! Data "${userText}" telah diproses dan disimpan ke Peta MitraPanen.`
+          : data.message || "⚠️ Gagal memproses perintah.");
 
       setMessages((prev) => [
         ...prev,
         { sender: "bot", text: botReply, time: currentTime },
       ]);
-    }, 700);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "bot",
+          text: "⚠️ Terjadi gangguan koneksi ke server bot. Silakan coba kembali.",
+          time: currentTime,
+        },
+      ]);
+    }
   };
 
   return (
