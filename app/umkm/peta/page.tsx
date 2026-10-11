@@ -1,11 +1,10 @@
 "use client";
 
-import PetaMockupView from "@/components/umkm/peta-mockup-view";
+import PetaMockupView from "@/components/umkm/peta/peta-mockup-view";
 
 export default function UmkmPetaPanenPage() {
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
-      {/* Title Header */}
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -22,7 +21,6 @@ export default function UmkmPetaPanenPage() {
         </div>
       </div>
 
-      {/* Fullscreen Map Mockup View */}
       <PetaMockupView />
     </div>
   );

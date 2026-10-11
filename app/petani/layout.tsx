@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { PetaniProfile } from "@/data/petani/types";
-import PetaniSidebar from "@/components/petani/petani-sidebar";
-import PetaniTopbar from "@/components/petani/petani-topbar";
+import PetaniSidebar from "@/components/petani/layout/petani-sidebar";
+import PetaniTopbar from "@/components/petani/layout/petani-topbar";
 
 export default function PetaniDashboardLayout({
   children,

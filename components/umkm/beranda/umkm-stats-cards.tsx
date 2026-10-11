@@ -7,7 +7,6 @@ import {
   ShoppingBag,
   MapPin,
   CheckCircle2,
-  Sparkles,
 } from "lucide-react";
 
 export default function UmkmStatsCards() {

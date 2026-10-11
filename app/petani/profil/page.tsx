@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { KebunGpsLocation } from "@/data/petani/types";
-import ProfilForm from "@/components/petani/profil-form";
-import GpsCoordinateCard from "@/components/petani/gps-coordinate-card";
+import ProfilForm from "@/components/petani/profil/profil-form";
+import GpsCoordinateCard from "@/components/petani/profil/gps-coordinate-card";
 
 export default function ProfilKebunPage() {
   const [userId, setUserId] = useState<string | null>(null);

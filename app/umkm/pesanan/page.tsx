@@ -1,6 +1,6 @@
 "use client";
 
-import PesananManagement from "@/components/umkm/pesanan-management";
+import PesananManagement from "@/components/umkm/pesanan/pesanan-management";
 
 export default function UmkmPesananPage() {
   return (

@@ -5,12 +5,8 @@ import {
   Store,
   MapPin,
   CheckCircle2,
-  Compass,
   ArrowRight,
-  Sparkles,
-  ShieldAlert,
   Loader2,
-  Building2,
   UtensilsCrossed,
 } from "lucide-react";
 
@@ -48,7 +44,6 @@ export default function UmkmOnboardingModal({
           );
         },
         () => {
-          // Fallback koordinat Sukasari / Lembang Bandung
           const fallbackLat = -6.8612;
           const fallbackLng = 107.5932;
           setCoords({ lat: fallbackLat, lng: fallbackLng });
@@ -80,11 +75,9 @@ export default function UmkmOnboardingModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl">
-        {/* Glow decoration */}
         <div className="absolute -top-12 -right-12 h-36 w-36 rounded-full bg-teal-400/20 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-12 -left-12 h-36 w-36 rounded-full bg-emerald-400/20 blur-3xl pointer-events-none" />
 
-        {/* Header Icon */}
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-lg shadow-teal-500/25">
             <Store className="h-6 w-6" />
@@ -103,9 +96,7 @@ export default function UmkmOnboardingModal({
           Sistem Geo-SCM menghubungkan dapur atau toko Anda langsung dengan kebun petani terdekat. Dapatkan bahan baku segar siap petik dengan harga petani tanpa biaya kirim perantara.
         </p>
 
-        {/* Form Selection */}
         <div className="mt-6 space-y-4">
-          {/* Dropdown Kategori Usaha */}
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
               Pilih Kategori Usaha Anda:
@@ -128,7 +119,6 @@ export default function UmkmOnboardingModal({
             </div>
           </div>
 
-          {/* Tombol Besar Dapatkan Lokasi Usaha Saya */}
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
               Titik Koordinat Dapur/Toko Anda:
@@ -154,7 +144,6 @@ export default function UmkmOnboardingModal({
               )}
             </button>
 
-            {/* Sukses Text Hijau */}
             {gpsMessage && (
               <div className="mt-2.5 flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 text-xs font-bold text-emerald-800 animate-in fade-in">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
@@ -164,7 +153,6 @@ export default function UmkmOnboardingModal({
           </div>
         </div>
 
-        {/* Footer Action */}
         <div className="mt-7 pt-4 border-t border-slate-100 flex gap-3">
           <button
             type="button"

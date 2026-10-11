@@ -3,12 +3,10 @@
 import Link from "next/link";
 import {
   MapPin,
-  Clock,
   Star,
   CheckCircle2,
   Navigation,
   ArrowRight,
-  TrendingDown,
   ShoppingBag,
 } from "lucide-react";
 import { UMKM_NEARBY_FARMS } from "@/data/umkm/umkm-data";
@@ -32,7 +30,7 @@ export default function SmartMatchmakingGrid() {
         </div>
 
         <Link
-          href="/dashboard/umkm/peta"
+          href="/umkm/peta"
           className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 hover:text-teal-800 hover:underline"
         >
           <span>Eksplorasi Seluruh Peta GIS</span>
@@ -125,7 +123,7 @@ export default function SmartMatchmakingGrid() {
               {/* Action Buttons */}
               <div className="mt-5 pt-3 border-t border-slate-100 flex items-center gap-2">
                 <Link
-                  href={`/dashboard/umkm/peta?farm=${farm.id}`}
+                  href={`/umkm/peta?farm=${farm.id}`}
                   className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 py-2.5 text-xs font-bold text-white shadow-xs transition"
                 >
                   <Navigation className="h-3.5 w-3.5" />
@@ -133,7 +131,7 @@ export default function SmartMatchmakingGrid() {
                 </Link>
 
                 <Link
-                  href={`/dashboard/umkm/pesanan?booking=${farm.id}`}
+                  href={`/umkm/pesanan?booking=${farm.id}`}
                   className="rounded-xl border border-slate-200 hover:bg-slate-50 p-2.5 text-slate-700 transition"
                   title="Pesan Langsung"
                 >

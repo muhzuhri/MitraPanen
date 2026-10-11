@@ -5,10 +5,10 @@ import Link from "next/link";
 import { Plus, Compass, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { PetaniDashboardStats, OrderItem } from "@/data/petani/types";
-import OverviewStatsGrid from "@/components/petani/overview-stats-grid";
-import OnboardingModal from "@/components/petani/onboarding-modal";
-import WhatsappBannerCta from "@/components/petani/whatsapp-banner-cta";
-import RecentOrdersTable from "@/components/petani/recent-orders-table";
+import OverviewStatsGrid from "@/components/petani/beranda/overview-stats-grid";
+import OnboardingModal from "@/components/petani/beranda/onboarding-modal";
+import WhatsappBannerCta from "@/components/petani/beranda/whatsapp-banner-cta";
+import RecentOrdersTable from "@/components/petani/beranda/recent-orders-table";
 
 export default function PetaniDashboardPage() {
   const [userId, setUserId] = useState<string | null>(null);

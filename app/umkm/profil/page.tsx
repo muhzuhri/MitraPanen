@@ -1,6 +1,6 @@
 "use client";
 
-import ProfilUsahaForm from "@/components/umkm/profil-usaha-form";
+import ProfilUsahaForm from "@/components/umkm/profil/profil-usaha-form";
 
 export default function UmkmProfilPage() {
   return (

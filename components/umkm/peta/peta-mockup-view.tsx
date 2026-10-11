@@ -8,14 +8,9 @@ import {
   MapPin,
   Navigation,
   ShoppingBag,
-  Star,
-  CheckCircle2,
-  Compass,
-  Layers,
-  Crosshair,
-  Sparkles,
-  PhoneCall,
   Clock,
+  Compass,
+  Crosshair,
   X,
   Plus,
   Minus,
@@ -29,7 +24,6 @@ export default function PetaMockupView() {
   const [showDetailCard, setShowDetailCard] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(14);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-  const [bookingSuccess, setBookingSuccess] = useState(false);
 
   // Pin coordinates for mockup map display
   const farmPins = [
@@ -40,19 +34,14 @@ export default function PetaMockupView() {
 
   return (
     <div className="relative h-[calc(100vh-8.5rem)] w-full overflow-hidden rounded-3xl border border-slate-200 shadow-md">
-      {/* ==================================================================== */}
-      {/* 1. MOCKUP PETA BASE (HIGH-TECH GIS GRID & TOPOLOGY PLACEHOLDER)     */}
-      {/* ==================================================================== */}
+      {/* 1. MOCKUP PETA BASE */}
       <div className="relative h-full w-full bg-slate-200 overflow-hidden select-none">
-        {/* Subtle Map Grid Pattern */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#cbd5e1_1px,transparent_1px),linear-gradient(to_bottom,#cbd5e1_1px,transparent_1px)] bg-[size:40px_40px] opacity-70" />
 
-        {/* Map Vector Terrain & Road Contours Mockup */}
         <svg
           className="absolute inset-0 h-full w-full opacity-40 pointer-events-none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Main Highway & GIS Arteries */}
           <path
             d="M -50 200 Q 250 150 450 350 T 950 400 T 1500 300"
             fill="none"
@@ -77,18 +66,16 @@ export default function PetaMockupView() {
             stroke="#ffffff"
             strokeWidth="4"
           />
-          {/* Topography Contour Rings */}
           <ellipse cx="45%" cy="40%" rx="180" ry="120" fill="none" stroke="#0d9488" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.5" />
           <ellipse cx="45%" cy="40%" rx="320" ry="240" fill="none" stroke="#0d9488" strokeWidth="1" strokeDasharray="6 6" opacity="0.3" />
         </svg>
 
-        {/* Central Buyer Location Marker (Dapur UMKM) */}
+        {/* Central Buyer Location Marker */}
         <div
           className="absolute z-10 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none"
           style={{ top: "45%", left: "45%" }}
         >
           <div className="relative flex items-center justify-center">
-            {/* Pulse Radar Radius */}
             <span className="absolute h-24 w-24 rounded-full bg-teal-500/20 animate-ping" />
             <span className="absolute h-16 w-16 rounded-full bg-teal-500/30" />
             <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-teal-700 text-white shadow-xl border-2 border-white">
@@ -100,7 +87,7 @@ export default function PetaMockupView() {
           </div>
         </div>
 
-        {/* Interactive Farm Pins on Mockup Map */}
+        {/* Interactive Farm Pins */}
         {farmPins.map(({ farm, top, left }) => {
           const isSelected = selectedFarm.id === farm.id;
           return (
@@ -114,7 +101,6 @@ export default function PetaMockupView() {
               className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-transform hover:scale-110 active:scale-95 group focus:outline-none`}
             >
               <div className="relative">
-                {/* Ping pulse for selected pin */}
                 {isSelected && (
                   <span className="absolute -inset-2 rounded-full bg-emerald-500/40 animate-ping" />
                 )}
@@ -129,7 +115,6 @@ export default function PetaMockupView() {
                 </div>
               </div>
 
-              {/* Pin Label Tag */}
               <div
                 className={`mt-1.5 rounded-xl px-2.5 py-1 text-[10px] font-black shadow-md border whitespace-nowrap transition-all ${
                   isSelected
@@ -144,7 +129,7 @@ export default function PetaMockupView() {
           );
         })}
 
-        {/* Map Control Buttons (Zoom, Reset, Legend) */}
+        {/* Controls */}
         <div className="absolute right-4 bottom-6 z-20 flex flex-col gap-2">
           <div className="flex flex-col rounded-2xl border border-slate-200 bg-white/90 shadow-md backdrop-blur-md overflow-hidden">
             <button
@@ -169,13 +154,10 @@ export default function PetaMockupView() {
         </div>
       </div>
 
-      {/* ==================================================================== */}
-      {/* 2. FLOATING SEARCH BAR (MELAYANG DI ATAS PETA)                      */}
-      {/* ==================================================================== */}
+      {/* 2. FLOATING SEARCH BAR */}
       <div className="absolute top-4 inset-x-4 sm:inset-x-6 z-30 pointer-events-none">
         <div className="mx-auto max-w-3xl pointer-events-auto">
           <div className="flex flex-col sm:flex-row items-center gap-2.5 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur-md">
-            {/* Input Pencarian */}
             <div className="relative flex-1 w-full">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                 <Search className="h-4 w-4 text-teal-600" />
@@ -189,7 +171,6 @@ export default function PetaMockupView() {
               />
             </div>
 
-            {/* Dropdown Radius */}
             <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
               <div className="flex items-center gap-1.5 shrink-0">
                 <span className="text-[11px] font-bold text-slate-500">Radius:</span>
@@ -205,7 +186,6 @@ export default function PetaMockupView() {
                 </select>
               </div>
 
-              {/* Tombol Filter */}
               <button
                 type="button"
                 className="flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition"
@@ -218,13 +198,10 @@ export default function PetaMockupView() {
         </div>
       </div>
 
-      {/* ==================================================================== */}
-      {/* 3. FLOATING CARD DETAIL PETANI (KIRI / BAWAH PETA)                 */}
-      {/* ==================================================================== */}
+      {/* 3. FLOATING DETAIL CARD */}
       {showDetailCard && selectedFarm && (
         <div className="absolute left-4 bottom-4 sm:left-6 sm:bottom-6 z-30 max-w-sm w-[calc(100%-2rem)] sm:w-96 animate-in slide-in-from-bottom-4 duration-300">
           <div className="relative rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-2xl backdrop-blur-md">
-            {/* Close Button */}
             <button
               onClick={() => setShowDetailCard(false)}
               className="absolute top-4 right-4 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
@@ -233,7 +210,6 @@ export default function PetaMockupView() {
               <X className="h-4 w-4" />
             </button>
 
-            {/* Header: Nama Petani & Jarak */}
             <div className="pr-6">
               <div className="flex items-center gap-1.5">
                 <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-800 border border-emerald-200">
@@ -253,7 +229,6 @@ export default function PetaMockupView() {
               </p>
             </div>
 
-            {/* Komoditas Detail (Cabai Sisa 50 Kg, Jarak 1.2 KM / 3 KM) */}
             <div className="mt-3.5 space-y-2 border-t border-slate-100 pt-3">
               {selectedFarm.komoditasTersedia.map((c, i) => (
                 <div
@@ -286,7 +261,6 @@ export default function PetaMockupView() {
               </div>
             </div>
 
-            {/* Tombol Aksi: Pesan & Ambil Sekarang */}
             <div className="mt-4 pt-2 border-t border-slate-100 flex gap-2">
               <button
                 type="button"
@@ -311,9 +285,7 @@ export default function PetaMockupView() {
         </div>
       )}
 
-      {/* ==================================================================== */}
-      {/* 4. MODAL DIALOG PEMESANAN CEPAT                                     */}
-      {/* ==================================================================== */}
+      {/* 4. MODAL DIALOG PEMESANAN */}
       {isBookingModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200">
@@ -356,7 +328,7 @@ export default function PetaMockupView() {
                 Batal
               </button>
               <Link
-                href="/dashboard/umkm/pesanan"
+                href="/umkm/pesanan"
                 className="flex-1 rounded-xl bg-teal-600 py-2.5 text-xs font-black text-white text-center hover:bg-teal-700 transition shadow-xs"
               >
                 Konfirmasi Pesanan

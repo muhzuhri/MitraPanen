@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
-import UmkmSidebar from "@/components/umkm/umkm-sidebar";
-import UmkmTopbar from "@/components/umkm/umkm-topbar";
+import UmkmSidebar from "@/components/umkm/layout/umkm-sidebar";
+import UmkmTopbar from "@/components/umkm/layout/umkm-topbar";
 import { DEFAULT_UMKM_PROFILE } from "@/data/umkm/umkm-data";
 import { supabase } from "@/lib/supabase";
 
-export default function UmkmDashboardLayout({
+export default function UmkmLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -21,30 +21,28 @@ export default function UmkmDashboardLayout({
     try {
       await supabase.auth.signOut();
     } catch {
-      // Ignored
+      // Abaikan jika error
     }
     router.push("/login");
   };
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900 antialiased">
-      {/* 1. DESKTOP SIDEBAR */}
+      {/* 1. Desktop Sidebar */}
       <div className="hidden lg:block lg:shrink-0">
         <div className="sticky top-0 h-screen">
           <UmkmSidebar profile={profile} onLogout={handleLogout} />
         </div>
       </div>
 
-      {/* 2. MOBILE DRAWER OVERLAY */}
+      {/* 2. Mobile Drawer Overlay */}
       {isMobileOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
-          {/* Backdrop */}
           <div
             className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
             onClick={() => setIsMobileOpen(false)}
           />
 
-          {/* Drawer Panel */}
           <div className="relative flex w-full max-w-xs flex-1 flex-col bg-white">
             <button
               onClick={() => setIsMobileOpen(false)}
@@ -63,7 +61,7 @@ export default function UmkmDashboardLayout({
         </div>
       )}
 
-      {/* 3. MAIN CONTENT AREA WITH TOPBAR */}
+      {/* 3. Main Content Container */}
       <div className="flex flex-1 flex-col min-w-0">
         <UmkmTopbar
           profile={profile}

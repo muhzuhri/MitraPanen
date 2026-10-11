@@ -26,28 +26,28 @@ interface UmkmSidebarProps {
 export const UMKM_NAV_ITEMS = [
   {
     label: "Beranda",
-    href: "/dashboard/umkm",
+    href: "/umkm",
     icon: Home,
     badge: "AI Aktif",
     badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
   },
   {
     label: "Peta Panen",
-    href: "/dashboard/umkm/peta",
+    href: "/umkm/peta",
     icon: MapPin,
     badge: "GIS Radar",
     badgeColor: "bg-teal-100 text-teal-800 border-teal-200",
   },
   {
     label: "Pesanan & Rute",
-    href: "/dashboard/umkm/pesanan",
+    href: "/umkm/pesanan",
     icon: ShoppingBag,
     badge: "2 Siap",
     badgeColor: "bg-amber-100 text-amber-800 border-amber-200",
   },
   {
     label: "Profil Usaha",
-    href: "/dashboard/umkm/profil",
+    href: "/umkm/profil",
     icon: Settings,
   },
 ];
@@ -71,7 +71,7 @@ export default function UmkmSidebar({
       {/* Brand Header */}
       <div className="flex h-16 items-center justify-between border-b border-slate-100 px-5">
         <Link
-          href="/dashboard/umkm"
+          href="/umkm"
           onClick={onCloseMobile}
           className="flex items-center gap-2.5 group"
         >
@@ -102,8 +102,8 @@ export default function UmkmSidebar({
           {UMKM_NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive =
-              item.href === "/dashboard/umkm"
-                ? pathname === "/dashboard/umkm"
+              item.href === "/umkm"
+                ? pathname === "/umkm"
                 : pathname.startsWith(item.href);
 
             return (
@@ -148,7 +148,7 @@ export default function UmkmSidebar({
         <div className="mt-6 space-y-3.5 border-t border-slate-100 pt-4">
           {/* Quick GIS Radar Banner */}
           <Link
-            href="/dashboard/umkm/peta"
+            href="/umkm/peta"
             onClick={onCloseMobile}
             className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-teal-900 to-emerald-950 p-3 text-white shadow-sm hover:shadow-md transition-all group border border-teal-800"
           >

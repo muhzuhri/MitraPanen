@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { Plus, Search, Filter, Loader2, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { PanenItem, KomoditasMaster } from "@/data/petani/types";
-import PanenCard from "@/components/petani/panen-card";
-import PanenModal from "@/components/petani/panen-modal";
-import PanenEmptyState from "@/components/petani/panen-empty-state";
+import PanenCard from "@/components/petani/panen/panen-card";
+import PanenModal from "@/components/petani/panen/panen-modal";
+import PanenEmptyState from "@/components/petani/panen/panen-empty-state";
 
 export default function ManajemenPanenPage() {
   const [daftarPanen, setDaftarPanen] = useState<PanenItem[]>([]);

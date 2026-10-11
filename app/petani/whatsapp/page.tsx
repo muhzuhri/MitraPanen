@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { MessageSquare, Bot, PhoneCall, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import WhatsAppCheatSheet from "@/components/petani/whatsapp-cheatsheet";
-import WhatsAppSimulator from "@/components/petani/whatsapp-simulator";
+import WhatsAppCheatSheet from "@/components/petani/whatsapp/whatsapp-cheatsheet";
+import WhatsAppSimulator from "@/components/petani/whatsapp/whatsapp-simulator";
 
 export default function AsistenWhatsappPage() {
   const [userName, setUserName] = useState("Mitra Petani");

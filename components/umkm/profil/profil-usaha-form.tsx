@@ -10,10 +10,8 @@ import {
   CheckCircle2,
   Save,
   Loader2,
-  Navigation,
   Crosshair,
   Building2,
-  Layers,
 } from "lucide-react";
 import { DEFAULT_UMKM_PROFILE, UmkmProfile } from "@/data/umkm/umkm-data";
 
@@ -43,7 +41,6 @@ export default function ProfilUsahaForm() {
           );
         },
         () => {
-          // Fallback demo koordinat Lembang / Sukasari
           const fallbackLat = -6.8612;
           const fallbackLng = 107.5932;
           setProfile((prev) => ({
@@ -98,9 +95,7 @@ export default function ProfilUsahaForm() {
 
       {/* Grid 2 Kolom (Kiri: Form Edit | Kanan: Card Lokasi Dapur & Peta Mini) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
-        {/* ================================================================== */}
-        {/* KOLOM KIRI (7 SPAN): FORM EDIT PROFIL USAHA                         */}
-        {/* ================================================================== */}
+        {/* KOLOM KIRI (7 SPAN): FORM EDIT PROFIL USAHA */}
         <div className="lg:col-span-7 rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm">
           <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-6">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-600 border border-teal-100">
@@ -117,7 +112,6 @@ export default function ProfilUsahaForm() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Nama Usaha */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
                 Nama Usaha / Restoran / Toko
@@ -136,7 +130,6 @@ export default function ProfilUsahaForm() {
               </div>
             </div>
 
-            {/* Email & No Telepon */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
@@ -175,7 +168,6 @@ export default function ProfilUsahaForm() {
               </div>
             </div>
 
-            {/* Kategori Usaha */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
                 Kategori Usaha
@@ -195,7 +187,6 @@ export default function ProfilUsahaForm() {
               </select>
             </div>
 
-            {/* Alamat Fisik Lengkap */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
                 Alamat Fisik Dapur / Outlet Utama
@@ -211,7 +202,6 @@ export default function ProfilUsahaForm() {
               />
             </div>
 
-            {/* Submit Button */}
             <div className="pt-3">
               <button
                 type="submit"
@@ -234,9 +224,7 @@ export default function ProfilUsahaForm() {
           </form>
         </div>
 
-        {/* ================================================================== */}
-        {/* KOLOM KANAN (5 SPAN): CARD LOKASI DAPUR & PETA MINI                */}
-        {/* ================================================================== */}
+        {/* KOLOM KANAN (5 SPAN): CARD LOKASI DAPUR & PETA MINI */}
         <div className="lg:col-span-5 rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm flex flex-col justify-between space-y-5">
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
@@ -258,17 +246,14 @@ export default function ProfilUsahaForm() {
               </span>
             </div>
 
-            {/* PETA MINI PLACEHOLDER (div gray-200 / slate-200) */}
+            {/* PETA MINI PLACEHOLDER */}
             <div className="relative h-52 w-full overflow-hidden rounded-2xl bg-gray-200 border border-slate-300 shadow-inner select-none flex items-center justify-center">
-              {/* Grid Background Mockup */}
               <div className="absolute inset-0 bg-[linear-gradient(to_right,#cbd5e1_1px,transparent_1px),linear-gradient(to_bottom,#cbd5e1_1px,transparent_1px)] bg-[size:24px_24px] opacity-60" />
 
-              {/* Radar Rings Mockup */}
               <div className="absolute h-36 w-36 rounded-full border border-teal-500/30" />
               <div className="absolute h-24 w-24 rounded-full border border-teal-500/50" />
               <div className="absolute h-12 w-12 rounded-full bg-teal-500/20 animate-ping" />
 
-              {/* Center Pin Dapur */}
               <div className="relative z-10 flex flex-col items-center">
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-700 text-white shadow-xl border-2 border-white">
                   <Crosshair className="h-5 w-5" />
@@ -278,13 +263,11 @@ export default function ProfilUsahaForm() {
                 </span>
               </div>
 
-              {/* Coordinates Overlay */}
               <div className="absolute bottom-2 left-2 right-2 rounded-xl bg-white/90 p-2 text-center text-[10px] font-mono font-bold text-slate-800 shadow-xs backdrop-blur-xs border border-white">
                 {profile.latitude.toFixed(4)}, {profile.longitude.toFixed(4)}
               </div>
             </div>
 
-            {/* Nilai Latitude / Longitude Text */}
             <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
               <div className="rounded-xl bg-slate-50 p-3 border border-slate-200/80">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">
@@ -309,7 +292,6 @@ export default function ProfilUsahaForm() {
             </p>
           </div>
 
-          {/* Tombol Perbarui Lokasi GPS */}
           <div className="pt-2">
             <button
               type="button"

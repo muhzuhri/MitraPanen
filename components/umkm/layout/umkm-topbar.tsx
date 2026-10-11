@@ -5,12 +5,9 @@ import {
   Menu,
   Sparkles,
   MapPin,
-  Bell,
-  ChevronDown,
   CheckCircle2,
   TrendingUp,
   AlertTriangle,
-  Zap,
 } from "lucide-react";
 import { UmkmProfile } from "@/data/umkm/umkm-data";
 
