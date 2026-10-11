@@ -50,30 +50,39 @@ export default function ManajemenPanenPage() {
       let { data: kebunList } = await supabase
         .from("kebun")
         .select("id, nama_kebun")
-        .eq("farmer_id", user.id);
+        .eq("farmer_id", user.id)
+        .limit(1);
 
       let currentKebunId = kebunList?.[0]?.id;
 
       if (!currentKebunId) {
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("full_name, address")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        const { data: newKebun } = await supabase
+        // Cek kembali apakah benar-benar belum ada kebun
+        const { count } = await supabase
           .from("kebun")
-          .insert({
-            farmer_id: user.id,
-            nama_kebun: `Kebun ${prof?.full_name || "Mitra Tani"}`,
-            alamat: prof?.address || "Lembang, Bandung Barat",
-            latitude: -6.8124,
-            longitude: 107.6189,
-          })
-          .select()
-          .maybeSingle();
+          .select("id", { count: "exact", head: true })
+          .eq("farmer_id", user.id);
 
-        currentKebunId = newKebun?.id;
+        if (!count || count === 0) {
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("full_name, address")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          const { data: newKebun } = await supabase
+            .from("kebun")
+            .insert({
+              farmer_id: user.id,
+              nama_kebun: `Kebun ${prof?.full_name || "Mitra Tani"}`,
+              alamat: prof?.address || "Lembang, Bandung Barat",
+              latitude: -6.8124,
+              longitude: 107.6189,
+            })
+            .select("id")
+            .single();
+
+          currentKebunId = newKebun?.id;
+        }
       }
 
       setFarmerKebunId(currentKebunId || null);

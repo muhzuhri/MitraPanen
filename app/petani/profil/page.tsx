@@ -50,11 +50,13 @@ export default function ProfilKebunPage() {
           .eq("id", user.id)
           .maybeSingle();
 
-        const { data: kebun } = await supabase
+        const { data: kebunList } = await supabase
           .from("kebun")
           .select("*")
           .eq("farmer_id", user.id)
-          .maybeSingle();
+          .limit(1);
+
+        const kebun = kebunList?.[0];
 
         const defaultName =
           prof?.full_name ||
@@ -113,7 +115,20 @@ export default function ProfilKebunPage() {
         .eq("id", userId);
 
       // 2. Simpan ke kebun
-      if (kebunId) {
+      let activeKebunId = kebunId;
+      if (!activeKebunId) {
+        const { data: existing } = await supabase
+          .from("kebun")
+          .select("id")
+          .eq("farmer_id", userId)
+          .limit(1);
+        if (existing && existing.length > 0) {
+          activeKebunId = existing[0].id;
+          setKebunId(activeKebunId);
+        }
+      }
+
+      if (activeKebunId) {
         await supabase
           .from("kebun")
           .update({
@@ -122,7 +137,7 @@ export default function ProfilKebunPage() {
             alamat: data.alamat.trim(),
             updated_at: new Date().toISOString(),
           })
-          .eq("id", kebunId);
+          .eq("id", activeKebunId);
       } else {
         const { data: newKebun } = await supabase
           .from("kebun")
@@ -135,7 +150,7 @@ export default function ProfilKebunPage() {
             longitude: coords.longitude,
           })
           .select("id")
-          .maybeSingle();
+          .single();
 
         if (newKebun) {
           setKebunId(newKebun.id);

@@ -40,28 +40,15 @@ export default function PetaniDashboardLayout({
           .eq("id", user.id)
           .maybeSingle();
 
-        const { data: kebun } = await supabase
+        const { data: kebunList } = await supabase
           .from("kebun")
-          .select("*")
+          .select("id, nama_kebun")
           .eq("farmer_id", user.id)
-          .maybeSingle();
+          .limit(1);
 
-        let farmName = kebun?.nama_kebun;
-        if (!kebun) {
-          const defaultFarmName = `Kebun ${prof?.full_name || user.user_metadata?.full_name || "Mitra"}`;
-          const { data: newKebun } = await supabase
-            .from("kebun")
-            .insert({
-              farmer_id: user.id,
-              nama_kebun: defaultFarmName,
-              alamat: prof?.address || "Lembang, Bandung Barat",
-              latitude: -6.8124,
-              longitude: 107.6189,
-            })
-            .select()
-            .maybeSingle();
-          farmName = newKebun?.nama_kebun || defaultFarmName;
-        }
+        const farmName =
+          kebunList?.[0]?.nama_kebun ||
+          `Kebun ${prof?.full_name || user.user_metadata?.full_name || "Mitra"}`;
 
         const rawName =
           prof?.full_name ||
