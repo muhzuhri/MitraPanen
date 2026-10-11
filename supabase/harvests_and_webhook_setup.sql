@@ -1,5 +1,5 @@
 -- ==============================================================================
--- MITRAPANEN - SKEMA PENYEMPURNAAN BOT WHATSAPP & HARVESTS
+-- MITRAPANEN - SKEMA PENYEMPURNAAN BOT WHATSAPP & HARVESTS (BEBAS ERROR FK)
 -- ==============================================================================
 -- CARA PENGGUNAAN:
 -- 1. Buka Supabase Dashboard (https://supabase.com/dashboard)
@@ -14,7 +14,7 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone_whatsapp TEXT;
 -- 2. BUAT TABEL HARVESTS (SESUAI SPESIFIKASI SKENARIO 1)
 CREATE TABLE IF NOT EXISTS public.harvests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  farmer_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  farmer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
   item_name TEXT NOT NULL,
   quantity NUMERIC(10,2) NOT NULL CHECK (quantity > 0),
   price_per_kg NUMERIC(12,2) NOT NULL CHECK (price_per_kg > 0),
@@ -40,7 +40,6 @@ CREATE POLICY "Semua orang dapat mengelola harvests"
   USING (true) 
   WITH CHECK (true);
 
--- 4. BUKA AKSES PROFILES DAN STOK_PANEN AGAR BOT BISA MEMVALIDASI NOMOR & MENAMPILKAN DI PETA
 DROP POLICY IF EXISTS "Profiles dapat dibaca semua pengguna" ON public.profiles;
 CREATE POLICY "Profiles dapat dibaca semua pengguna" 
   ON public.profiles FOR SELECT 
@@ -58,25 +57,39 @@ CREATE POLICY "Semua bisa mengelola stok panen"
   USING (true) 
   WITH CHECK (true);
 
--- 5. DAFTARKAN PROFIL PETANI UNTUK AKUN ZUHRI (MENGHUBUNGKAN DENGAN KEBUN YANG SUDAH ADA)
-INSERT INTO public.profiles (
-  id,
-  full_name,
-  role,
-  phone_whatsapp,
-  phone_number
-)
-VALUES (
-  '3984777f-fe72-4fcf-85d4-8d5965c035d9',
-  'Muh. Zuhri Mubarak',
-  'petani',
-  '082160107638',
-  '082160107638'
-)
-ON CONFLICT (id) DO UPDATE SET
-  full_name = EXCLUDED.full_name,
-  role = 'petani',
-  phone_whatsapp = EXCLUDED.phone_whatsapp,
-  phone_number = EXCLUDED.phone_number;
+-- 4. DAFTARKAN PROFIL SECARA DINAMIS DARI USER AUTH YANG ADA (MENCEGAH ERROR FK)
+DO $$
+DECLARE
+  v_user_id UUID;
+BEGIN
+  -- Mengambil ID akun yang ada di tabel auth.users
+  SELECT id INTO v_user_id FROM auth.users ORDER BY created_at DESC LIMIT 1;
+  
+  IF v_user_id IS NOT NULL THEN
+    INSERT INTO public.profiles (
+      id,
+      full_name,
+      role,
+      phone_whatsapp,
+      phone_number
+    )
+    VALUES (
+      v_user_id,
+      'Muh. Zuhri Mubarak',
+      'petani',
+      '082160107638',
+      '082160107638'
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      full_name = EXCLUDED.full_name,
+      role = 'petani',
+      phone_whatsapp = EXCLUDED.phone_whatsapp,
+      phone_number = EXCLUDED.phone_number;
 
--- Selesai! Tabel harvests siap digunakan dan nomor 082160107638 resmi aktif sebagai Petani.
+    -- Hubungkan kebun yang ada ke user id ini
+    UPDATE public.kebun SET farmer_id = v_user_id;
+  END IF;
+END $$;
+
+-- 5. CEK STATUS AKUN YANG ADA
+SELECT id, email, created_at FROM auth.users;
