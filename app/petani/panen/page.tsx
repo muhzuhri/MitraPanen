@@ -1,7 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Filter, Loader2, Sparkles } from "lucide-react";
+import Link from "next/link";
+import {
+  Plus,
+  Search,
+  Filter,
+  Loader2,
+  Sparkles,
+  Lock,
+  ShieldAlert,
+  ShieldCheck,
+  ChevronRight,
+  AlertTriangle,
+} from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { PanenItem, KomoditasMaster } from "@/data/petani/types";
 import PanenCard from "@/components/petani/panen/panen-card";
@@ -15,6 +27,13 @@ export default function ManajemenPanenPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [farmerKebunId, setFarmerKebunId] = useState<string | null>(null);
+  const [farmLocation, setFarmLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  }>({ latitude: -6.8124, longitude: 107.6189 });
+
+  // Status Verifikasi & Anti-Fraud Locking
+  const [isVerified, setIsVerified] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,7 +57,45 @@ export default function ManajemenPanenPage() {
       }
       setUserId(user.id);
 
-      // 1. Ambil master komoditas
+      // 1. Cek Verifikasi Profil Petani (KYC & Lahan)
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const hasNik = Boolean(prof?.nik && prof.nik.length >= 16);
+      const hasKtp = Boolean(prof?.foto_ktp_url);
+      const hasLahan = Boolean(prof?.foto_lahan_url);
+      const profileVerified =
+        Boolean(prof?.is_verified) || (hasNik && hasKtp && hasLahan);
+
+      // 2. Ambil Kebun Petani
+      const { data: kebunList } = await supabase
+        .from("kebun")
+        .select("id, nama_kebun, latitude, longitude, foto_kebun_url, is_verified")
+        .eq("farmer_id", user.id)
+        .limit(1);
+
+      const currentKebun = kebunList?.[0];
+      const kebunId = currentKebun?.id;
+      setFarmerKebunId(kebunId || null);
+
+      if (currentKebun?.latitude && currentKebun?.longitude) {
+        setFarmLocation({
+          latitude: Number(currentKebun.latitude),
+          longitude: Number(currentKebun.longitude),
+        });
+      }
+
+      const isFinalVerified =
+        profileVerified ||
+        Boolean(currentKebun?.is_verified) ||
+        (hasNik && hasKtp && Boolean(currentKebun?.foto_kebun_url));
+
+      setIsVerified(isFinalVerified);
+
+      // 3. Ambil Master Komoditas
       const { data: kData } = await supabase
         .from("komoditas")
         .select("id, nama, kategori");
@@ -46,54 +103,13 @@ export default function ManajemenPanenPage() {
         setKomoditasList(kData);
       }
 
-      // 2. Cari kebun milik petani ini
-      let { data: kebunList } = await supabase
-        .from("kebun")
-        .select("id, nama_kebun")
-        .eq("farmer_id", user.id)
-        .limit(1);
-
-      let currentKebunId = kebunList?.[0]?.id;
-
-      if (!currentKebunId) {
-        // Cek kembali apakah benar-benar belum ada kebun
-        const { count } = await supabase
-          .from("kebun")
-          .select("id", { count: "exact", head: true })
-          .eq("farmer_id", user.id);
-
-        if (!count || count === 0) {
-          const { data: prof } = await supabase
-            .from("profiles")
-            .select("full_name, address")
-            .eq("id", user.id)
-            .maybeSingle();
-
-          const { data: newKebun } = await supabase
-            .from("kebun")
-            .insert({
-              farmer_id: user.id,
-              nama_kebun: `Kebun ${prof?.full_name || "Mitra Tani"}`,
-              alamat: prof?.address || "Lembang, Bandung Barat",
-              latitude: -6.8124,
-              longitude: 107.6189,
-            })
-            .select("id")
-            .single();
-
-          currentKebunId = newKebun?.id;
-        }
-      }
-
-      setFarmerKebunId(currentKebunId || null);
-
-      if (!currentKebunId) {
+      if (!kebunId) {
         setDaftarPanen([]);
         setIsLoading(false);
         return;
       }
 
-      // 3. Ambil stok_panen dengan relasi komoditas
+      // 4. Ambil stok_panen
       const { data: stokRows, error: stokErr } = await supabase
         .from("stok_panen")
         .select(`
@@ -113,14 +129,15 @@ export default function ManajemenPanenPage() {
             kategori
           )
         `)
-        .eq("kebun_id", currentKebunId)
+        .eq("kebun_id", kebunId)
         .order("created_at", { ascending: false });
 
       if (stokErr) {
         console.error("Gagal mengambil stok_panen:", stokErr);
       } else if (stokRows) {
         const mapped: PanenItem[] = stokRows.map((row: any) => {
-          const dateStr = row.updated_at || row.created_at || new Date().toISOString();
+          const dateStr =
+            row.updated_at || row.created_at || new Date().toISOString();
           const parsedDate = new Date(dateStr);
           const formattedDate = isNaN(parsedDate.getTime())
             ? "Baru saja"
@@ -155,6 +172,7 @@ export default function ManajemenPanenPage() {
     fetchPanenData();
   }, []);
 
+  // Simpan / Tambah Panen Baru
   const handleSavePanen = async (formData: {
     nama: string;
     kategori: string;
@@ -163,9 +181,23 @@ export default function ManajemenPanenPage() {
     harga: number;
     status: PanenItem["status"];
     catatan: string;
+    fotoPanenUrl?: string;
+    exifData?: {
+      dateTime?: string | null;
+      latitude?: number | null;
+      longitude?: number | null;
+      distanceMeters?: number | null;
+      trustScore?: number;
+    };
   }) => {
     if (!farmerKebunId) {
       throw new Error("Kebun belum terhubung. Silakan muat ulang halaman.");
+    }
+
+    if (!isVerified) {
+      throw new Error(
+        "Profil belum terverifikasi. Lengkapi NIK dan KTP Anda terlebih dahulu."
+      );
     }
 
     setIsSaving(true);
@@ -229,9 +261,13 @@ export default function ManajemenPanenPage() {
           insertPayload.komoditas_id = komoditasId;
         }
 
-        const { error } = await supabase.from("stok_panen").insert(insertPayload);
+        const { error } = await supabase
+          .from("stok_panen")
+          .insert(insertPayload);
         if (error) throw error;
-        setNotification(`Stok "${formData.nama}" berhasil ditambahkan ke peta!`);
+        setNotification(
+          `✅ Panen "${formData.nama}" berhasil diverifikasi & ditambahkan ke peta!`
+        );
       }
 
       await fetchPanenData();
@@ -275,27 +311,86 @@ export default function ManajemenPanenPage() {
         </div>
       )}
 
+      {/* BANNER SISTEM BLOKIR: Jika belum terverifikasi */}
+      {!isVerified && !isLoading && (
+        <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/90 p-4 sm:p-5 text-amber-950 shadow-sm animate-in fade-in duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-amber-500 text-white p-2.5 shrink-0 shadow-xs">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-amber-950">
+                  ⚠️ Lengkapi Profil & Verifikasi KTP Anda di menu Profil untuk mulai menjual.
+                </h4>
+                <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
+                  Sistem keamanan Anti-Fraud mengunci penambahan stok panen sampai Anda mengunggah nomor NIK, foto KTP asli, dan foto lahan kebun.
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href="/petani/profil"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-700 hover:bg-amber-800 px-4 py-2 text-xs font-bold text-white shadow-xs transition-colors shrink-0"
+            >
+              <span>Verifikasi Sekarang</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">
-            Manajemen Stok Panen
-          </h1>
-          <p className="text-xs text-slate-500">
-            Kelola stok komoditas aktif Anda yang langsung terdeteksi oleh radar UMKM
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-black tracking-tight text-slate-900">
+              Manajemen Stok Panen
+            </h1>
+            {isVerified ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                <ShieldCheck className="h-3 w-3 text-emerald-600" />
+                Anti-Fraud Aktif
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-700 border border-red-200">
+                <ShieldAlert className="h-3 w-3 text-red-600" />
+                Fitur Jual Terkunci
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Setiap stok panen wajib divalidasi keaslian fotonya melalui sensor EXIF kamera dan koordinat kebun.
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            setEditItem(null);
-            setIsModalOpen(true);
-          }}
-          className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/20 hover:bg-emerald-700 transition-all self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Tambah Panen Baru</span>
-        </button>
+        {/* Tombol Tambah Panen Baru: DIBLOKIR / DIKUNCI JIKA PROFIL BELUM LENGKAP */}
+        {isVerified ? (
+          <button
+            onClick={() => {
+              setEditItem(null);
+              setIsModalOpen(true);
+            }}
+            className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/20 hover:bg-emerald-700 transition-all self-start sm:self-auto cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            <span>+ Tambah Panen Baru</span>
+          </button>
+        ) : (
+          <div className="relative group self-start sm:self-auto">
+            <button
+              disabled
+              className="flex items-center gap-2 rounded-xl bg-slate-200 px-5 py-2.5 text-xs font-bold text-slate-400 shadow-xs cursor-not-allowed border border-slate-300"
+              title="Lengkapi profil dan verifikasi KTP terlebih dahulu"
+            >
+              <Lock className="h-4 w-4 text-slate-400" />
+              <span>+ Tambah Panen Baru (Terkunci)</span>
+            </button>
+            <div className="absolute right-0 top-full mt-1.5 hidden group-hover:block z-20 w-64 rounded-xl bg-slate-900 p-2.5 text-[11px] text-white shadow-xl">
+              ⚠️ Lengkapi Profil & Verifikasi KTP Anda di menu Profil untuk mulai menjual.
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Search & Filter Toolbar */}
@@ -335,8 +430,12 @@ export default function ManajemenPanenPage() {
       ) : filteredPanen.length === 0 ? (
         <PanenEmptyState
           onAddClick={() => {
-            setEditItem(null);
-            setIsModalOpen(true);
+            if (isVerified) {
+              setEditItem(null);
+              setIsModalOpen(true);
+            } else {
+              window.location.href = "/petani/profil";
+            }
           }}
           isFiltered={daftarPanen.length > 0}
         />
@@ -356,13 +455,14 @@ export default function ManajemenPanenPage() {
         </div>
       )}
 
-      {/* Panen Add/Edit Modal */}
+      {/* Panen Add/Edit Modal dengan Anti-Fraud Engine */}
       <PanenModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         editItem={editItem}
         komoditasList={komoditasList}
         isSaving={isSaving}
+        farmLocation={farmLocation}
         onSave={handleSavePanen}
       />
     </div>
