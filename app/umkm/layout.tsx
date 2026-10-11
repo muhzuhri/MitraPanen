@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { X, Loader2 } from "lucide-react";
+import { X } from "lucide-react";
 import UmkmSidebar from "@/components/umkm/layout/umkm-sidebar";
 import UmkmTopbar from "@/components/umkm/layout/umkm-topbar";
 import { UmkmProvider, useUmkm } from "@/components/umkm/layout/umkm-context";
@@ -33,17 +33,6 @@ function UmkmLayoutContent({ children }: { children: React.ReactNode }) {
     }
     router.push("/login");
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
-          <p className="text-xs font-semibold text-slate-500">Memuat dashboard...</p>
-        </div>
-      </div>
-    );
-  }
 
   const defaultProfile = profile || {
     id: "",
