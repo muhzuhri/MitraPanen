@@ -1,340 +1,243 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   Search,
-  Filter,
   MapPin,
   Navigation,
-  ShoppingBag,
-  Clock,
-  Compass,
   Crosshair,
   X,
   Plus,
   Minus,
+  Loader2,
+  Store,
+  Phone,
 } from "lucide-react";
-import { UMKM_NEARBY_FARMS, UmkmNearbyFarm } from "@/data/umkm/umkm-data";
+import { supabase } from "@/lib/supabase";
+
+interface KebunPoint {
+  id: string;
+  namaKebun: string;
+  alamat: string;
+  petaniNama: string;
+  phoneWhatsapp: string;
+  latitude: number;
+  longitude: number;
+}
 
 export default function PetaMockupView() {
+  const [kebunList, setKebunList] = useState<KebunPoint[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRadius, setSelectedRadius] = useState("5 KM");
-  const [selectedFarm, setSelectedFarm] = useState<UmkmNearbyFarm>(UMKM_NEARBY_FARMS[0]);
-  const [showDetailCard, setShowDetailCard] = useState(true);
+  const [selectedFarm, setSelectedFarm] = useState<KebunPoint | null>(null);
   const [zoomLevel, setZoomLevel] = useState(14);
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
-  // Pin coordinates for mockup map display
-  const farmPins = [
-    { farm: UMKM_NEARBY_FARMS[0], top: "38%", left: "42%" },
-    { farm: UMKM_NEARBY_FARMS[1], top: "54%", left: "68%" },
-    { farm: UMKM_NEARBY_FARMS[2], top: "66%", left: "28%" },
-  ];
+  useEffect(() => {
+    async function loadKebun() {
+      try {
+        const { data: rows } = await supabase
+          .from("kebun")
+          .select(`
+            id,
+            nama_kebun,
+            alamat,
+            latitude,
+            longitude,
+            profiles:farmer_id (
+              full_name,
+              phone_whatsapp
+            )
+          `);
+
+        if (rows && rows.length > 0) {
+          const mapped: KebunPoint[] = rows.map((k: any, idx: number) => {
+            const prof = Array.isArray(k.profiles) ? k.profiles[0] : k.profiles;
+            return {
+              id: k.id,
+              namaKebun: k.nama_kebun || `Kebun Mitra ${idx + 1}`,
+              alamat: k.alamat || "Jawa Barat",
+              petaniNama: prof?.full_name || "Petani Mitra",
+              phoneWhatsapp: prof?.phone_whatsapp || "",
+              latitude: Number(k.latitude) || -6.8124,
+              longitude: Number(k.longitude) || 107.6189,
+            };
+          });
+          setKebunList(mapped);
+          setSelectedFarm(mapped[0] || null);
+        } else {
+          setKebunList([]);
+        }
+      } catch (err) {
+        console.error("Gagal memuat kebun untuk peta:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadKebun();
+  }, []);
+
+  const filteredKebun = kebunList.filter((k) =>
+    k.namaKebun.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    k.alamat.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    k.petaniNama.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="relative h-[calc(100vh-8.5rem)] w-full overflow-hidden rounded-3xl border border-slate-200 shadow-md">
+    <div className="relative h-[calc(100vh-11rem)] w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-100 shadow-xs">
       {/* 1. MOCKUP PETA BASE */}
-      <div className="relative h-full w-full bg-slate-200 overflow-hidden select-none">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#cbd5e1_1px,transparent_1px),linear-gradient(to_bottom,#cbd5e1_1px,transparent_1px)] bg-[size:40px_40px] opacity-70" />
-
-        <svg
-          className="absolute inset-0 h-full w-full opacity-40 pointer-events-none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M -50 200 Q 250 150 450 350 T 950 400 T 1500 300"
-            fill="none"
-            stroke="#94a3b8"
-            strokeWidth="12"
-          />
-          <path
-            d="M -50 200 Q 250 150 450 350 T 950 400 T 1500 300"
-            fill="none"
-            stroke="#f8fafc"
-            strokeWidth="6"
-          />
-          <path
-            d="M 300 -50 Q 400 300 350 700 T 500 1200"
-            fill="none"
-            stroke="#94a3b8"
-            strokeWidth="8"
-          />
-          <path
-            d="M 300 -50 Q 400 300 350 700 T 500 1200"
-            fill="none"
-            stroke="#ffffff"
-            strokeWidth="4"
-          />
-          <ellipse cx="45%" cy="40%" rx="180" ry="120" fill="none" stroke="#0d9488" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.5" />
-          <ellipse cx="45%" cy="40%" rx="320" ry="240" fill="none" stroke="#0d9488" strokeWidth="1" strokeDasharray="6 6" opacity="0.3" />
-        </svg>
+      <div className="relative h-full w-full select-none overflow-hidden bg-slate-200">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#cbd5e1_1px,transparent_1px),linear-gradient(to_bottom,#cbd5e1_1px,transparent_1px)] bg-[size:40px_40px] opacity-60" />
 
         {/* Central Buyer Location Marker */}
         <div
           className="absolute z-10 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none"
-          style={{ top: "45%", left: "45%" }}
+          style={{ top: "48%", left: "45%" }}
         >
           <div className="relative flex items-center justify-center">
-            <span className="absolute h-24 w-24 rounded-full bg-teal-500/20 animate-ping" />
-            <span className="absolute h-16 w-16 rounded-full bg-teal-500/30" />
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-teal-700 text-white shadow-xl border-2 border-white">
-              <Crosshair className="h-5 w-5" />
+            <span className="absolute h-12 w-12 rounded-full bg-teal-500/20 animate-ping" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-700 text-white shadow-md border-2 border-white">
+              <Crosshair className="h-4 w-4" />
             </div>
           </div>
-          <div className="mt-1 rounded-full bg-slate-900/90 px-2.5 py-0.5 text-[10px] font-black text-white shadow-md border border-slate-700 whitespace-nowrap backdrop-blur-xs">
-            📍 Dapur Anda (Sukasari)
-          </div>
+          <span className="mt-1 rounded-md bg-slate-900/90 px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
+            Dapur Anda
+          </span>
         </div>
 
-        {/* Interactive Farm Pins */}
-        {farmPins.map(({ farm, top, left }) => {
-          const isSelected = selectedFarm.id === farm.id;
+        {/* Real Kebun Pins */}
+        {filteredKebun.map((farm, idx) => {
+          const isSelected = selectedFarm?.id === farm.id;
+          // Calculate spread for mockup map visualization
+          const topPos = `${35 + ((idx * 23) % 45)}%`;
+          const leftPos = `${25 + ((idx * 31) % 55)}%`;
+
           return (
             <button
               key={farm.id}
-              onClick={() => {
-                setSelectedFarm(farm);
-                setShowDetailCard(true);
-              }}
-              style={{ top, left }}
-              className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-transform hover:scale-110 active:scale-95 group focus:outline-none`}
+              onClick={() => setSelectedFarm(farm)}
+              style={{ top: topPos, left: leftPos }}
+              className="absolute z-10 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group focus:outline-none transition-transform hover:scale-105"
             >
-              <div className="relative">
-                {isSelected && (
-                  <span className="absolute -inset-2 rounded-full bg-emerald-500/40 animate-ping" />
-                )}
-                <div
-                  className={`flex h-11 w-11 items-center justify-center rounded-2xl shadow-xl transition-all border-2 ${
-                    isSelected
-                      ? "bg-emerald-600 text-white border-white scale-110 ring-4 ring-emerald-500/30"
-                      : "bg-white text-emerald-700 border-emerald-500 hover:bg-emerald-50"
-                  }`}
-                >
-                  <MapPin className="h-6 w-6 fill-current" />
-                </div>
+              <div
+                className={`flex h-9 w-9 items-center justify-center rounded-xl shadow-md border-2 transition ${
+                  isSelected
+                    ? "bg-teal-600 text-white border-white ring-3 ring-teal-500/30 scale-110"
+                    : "bg-white text-teal-700 border-teal-500 hover:bg-teal-50"
+                }`}
+              >
+                <MapPin className="h-4 w-4 fill-current" />
               </div>
 
               <div
-                className={`mt-1.5 rounded-xl px-2.5 py-1 text-[10px] font-black shadow-md border whitespace-nowrap transition-all ${
+                className={`mt-1 rounded-md px-2 py-0.5 text-[10px] font-bold shadow-xs border whitespace-nowrap ${
                   isSelected
-                    ? "bg-emerald-950 text-emerald-100 border-emerald-700 scale-105"
-                    : "bg-white text-slate-800 border-slate-200 group-hover:border-emerald-300"
+                    ? "bg-slate-900 text-white border-slate-700"
+                    : "bg-white text-slate-800 border-slate-200"
                 }`}
               >
-                <span>{farm.namaKebun.split(" ")[1] || farm.namaKebun}</span>
-                <span className="ml-1 text-emerald-500 font-extrabold">• {farm.jarakKm} km</span>
+                {farm.namaKebun}
               </div>
             </button>
           );
         })}
 
-        {/* Controls */}
-        <div className="absolute right-4 bottom-6 z-20 flex flex-col gap-2">
-          <div className="flex flex-col rounded-2xl border border-slate-200 bg-white/90 shadow-md backdrop-blur-md overflow-hidden">
-            <button
-              onClick={() => setZoomLevel((z) => Math.min(z + 1, 18))}
-              className="p-2.5 text-slate-700 hover:bg-slate-100 transition border-b border-slate-200"
-              title="Perbesar Peta"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setZoomLevel((z) => Math.max(z - 1, 10))}
-              className="p-2.5 text-slate-700 hover:bg-slate-100 transition"
-              title="Perkecil Peta"
-            >
-              <Minus className="h-4 w-4" />
-            </button>
-          </div>
+        {/* Map Zoom Controls */}
+        <div className="absolute right-3 bottom-4 z-20 flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <button
+            onClick={() => setZoomLevel((z) => Math.min(z + 1, 18))}
+            className="p-2 text-slate-700 hover:bg-slate-50 transition border-b border-slate-100"
+            title="Perbesar"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setZoomLevel((z) => Math.max(z - 1, 10))}
+            className="p-2 text-slate-700 hover:bg-slate-50 transition"
+            title="Perkecil"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white/90 p-2 text-slate-700 shadow-md backdrop-blur-md">
-            <Compass className="h-5 w-5 text-teal-600" />
+      {/* 2. SEARCH BAR BERSIH */}
+      <div className="absolute top-3 inset-x-3 sm:inset-x-5 z-30 pointer-events-none">
+        <div className="max-w-md pointer-events-auto">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari kebun atau lokasi..."
+              className="w-full rounded-xl border border-slate-200 bg-white/95 pl-9 pr-3.5 py-2 text-xs font-semibold text-slate-900 shadow-md backdrop-blur-xs focus:border-teal-500 focus:outline-none"
+            />
           </div>
         </div>
       </div>
 
-      {/* 2. FLOATING SEARCH BAR */}
-      <div className="absolute top-4 inset-x-4 sm:inset-x-6 z-30 pointer-events-none">
-        <div className="mx-auto max-w-3xl pointer-events-auto">
-          <div className="flex flex-col sm:flex-row items-center gap-2.5 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur-md">
-            <div className="relative flex-1 w-full">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                <Search className="h-4 w-4 text-teal-600" />
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari komoditas (misal: Cabai rawit, Tomat, Bawang)..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:border-teal-500 focus:bg-white focus:outline-none transition shadow-2xs"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-[11px] font-bold text-slate-500">Radius:</span>
-                <select
-                  value={selectedRadius}
-                  onChange={(e) => setSelectedRadius(e.target.value)}
-                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-800 focus:border-teal-500 focus:outline-none shadow-2xs"
-                >
-                  <option value="3 KM">Di bawah 3 KM</option>
-                  <option value="5 KM">Di bawah 5 KM</option>
-                  <option value="10 KM">Di bawah 10 KM</option>
-                  <option value="Semua">Semua Radius</option>
-                </select>
-              </div>
-
-              <button
-                type="button"
-                className="flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition"
-              >
-                <Filter className="h-3.5 w-3.5" />
-                <span>Filter</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. FLOATING DETAIL CARD */}
-      {showDetailCard && selectedFarm && (
-        <div className="absolute left-4 bottom-4 sm:left-6 sm:bottom-6 z-30 max-w-sm w-[calc(100%-2rem)] sm:w-96 animate-in slide-in-from-bottom-4 duration-300">
-          <div className="relative rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-2xl backdrop-blur-md">
+      {/* 3. DETAIL CARD BERSIH */}
+      {selectedFarm && (
+        <div className="absolute left-3 bottom-3 sm:left-4 sm:bottom-4 z-30 max-w-xs w-[calc(100%-1.5rem)] sm:w-80">
+          <div className="relative rounded-2xl border border-slate-200/90 bg-white/95 p-4 shadow-lg backdrop-blur-md">
             <button
-              onClick={() => setShowDetailCard(false)}
-              className="absolute top-4 right-4 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
-              title="Tutup Kartu"
+              onClick={() => setSelectedFarm(null)}
+              className="absolute top-3 right-3 rounded-md p-1 text-slate-400 hover:bg-slate-100"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
 
-            <div className="pr-6">
-              <div className="flex items-center gap-1.5">
-                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-800 border border-emerald-200">
-                  Terverifikasi GIS
-                </span>
-                <span className="text-[11px] font-bold text-teal-700 flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  Rute {selectedFarm.estimasiMenit} Menit
-                </span>
-              </div>
-
-              <h3 className="mt-1.5 text-base font-black text-slate-900 leading-tight">
+            <div className="pr-5">
+              <span className="rounded-md bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-800 border border-teal-200">
+                Kebun Terdaftar
+              </span>
+              <h4 className="mt-1 text-sm font-bold text-slate-900 truncate">
                 {selectedFarm.namaKebun}
-              </h3>
-              <p className="text-xs text-slate-500 font-semibold mt-0.5">
+              </h4>
+              <p className="text-[11px] text-slate-500">
                 Petani: {selectedFarm.petaniNama}
               </p>
             </div>
 
-            <div className="mt-3.5 space-y-2 border-t border-slate-100 pt-3">
-              {selectedFarm.komoditasTersedia.map((c, i) => (
-                <div
-                  key={i}
-                  className="rounded-2xl bg-slate-50 p-3 border border-slate-100 flex items-center justify-between text-xs"
-                >
-                  <div>
-                    <p className="font-black text-slate-800">{c.nama}</p>
-                    <p className="text-[11px] text-emerald-700 font-bold mt-0.5">
-                      Sisa Stok: {c.stokKg} Kg Siap Petik
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-black text-teal-700">
-                      Rp {c.hargaPerKg.toLocaleString("id-ID")}/kg
-                    </p>
-                    <p className="text-[10px] line-through text-slate-400">
-                      Pasar Rp {c.hargaPasarPerKg.toLocaleString("id-ID")}
-                    </p>
-                  </div>
-                </div>
-              ))}
-
-              <div className="flex items-center justify-between text-[11px] text-slate-500 px-1 pt-1">
-                <span className="flex items-center gap-1 font-semibold">
-                  <MapPin className="h-3.5 w-3.5 text-teal-600" />
-                  Jarak: <strong className="text-slate-800 font-bold">{selectedFarm.jarakKm} KM</strong> dari Dapur Anda
-                </span>
-                <span className="font-bold text-emerald-600">Self-Pick Up</span>
+            <div className="mt-2.5 text-[11px] text-slate-600 space-y-1 border-t border-slate-100 pt-2">
+              <div className="flex items-start gap-1">
+                <MapPin className="h-3.5 w-3.5 text-teal-600 shrink-0 mt-0.5" />
+                <span className="line-clamp-2">{selectedFarm.alamat}</span>
               </div>
             </div>
 
-            <div className="mt-4 pt-2 border-t border-slate-100 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setIsBookingModalOpen(true)}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 py-3 text-xs font-black text-white shadow-md shadow-teal-600/25 hover:from-teal-700 hover:to-emerald-700 transition active:scale-[0.98]"
-              >
-                <ShoppingBag className="h-4 w-4" />
-                <span>Pesan & Ambil Sekarang</span>
-              </button>
-
+            <div className="mt-3 pt-2 border-t border-slate-100 flex gap-2">
               <a
                 href={`https://maps.google.com/?q=${selectedFarm.latitude},${selectedFarm.longitude}`}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center justify-center rounded-xl border border-slate-200 hover:bg-slate-50 px-3 text-slate-700 transition"
-                title="Buka Navigasi Google Maps"
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 py-2 text-xs font-bold text-white shadow-xs transition"
               >
-                <Navigation className="h-4 w-4 text-teal-600" />
+                <Navigation className="h-3.5 w-3.5" />
+                <span>Rute Maps</span>
               </a>
+
+              {selectedFarm.phoneWhatsapp && (
+                <a
+                  href={`https://wa.me/${selectedFarm.phoneWhatsapp.replace(/\D/g, "")}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-xl border border-slate-200 hover:bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 flex items-center justify-center"
+                  title="Hubungi Petani"
+                >
+                  <Phone className="h-3.5 w-3.5" />
+                </a>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* 4. MODAL DIALOG PEMESANAN */}
-      {isBookingModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-            <h4 className="text-base font-black text-slate-900">
-              Konfirmasi Pemesanan Panen
-            </h4>
-            <p className="text-xs text-slate-500 mt-1">
-              {selectedFarm.namaKebun} ({selectedFarm.petaniNama}) • Jarak {selectedFarm.jarakKm} KM
-            </p>
-
-            <div className="mt-4 rounded-2xl bg-teal-50/70 p-4 border border-teal-200/70 text-xs space-y-2">
-              <div className="flex justify-between font-bold text-slate-800">
-                <span>Komoditas</span>
-                <span>{selectedFarm.komoditasTersedia[0].nama}</span>
-              </div>
-              <div className="flex justify-between font-bold text-slate-800">
-                <span>Jumlah Ambil</span>
-                <span>50 Kg</span>
-              </div>
-              <div className="flex justify-between font-bold text-slate-800">
-                <span>Harga per Kg</span>
-                <span>Rp {selectedFarm.komoditasTersedia[0].hargaPerKg.toLocaleString("id-ID")}</span>
-              </div>
-              <div className="border-t border-teal-200 pt-2 flex justify-between font-black text-teal-900 text-sm">
-                <span>Total Estimasi</span>
-                <span>Rp {(50 * selectedFarm.komoditasTersedia[0].hargaPerKg).toLocaleString("id-ID")}</span>
-              </div>
-            </div>
-
-            <p className="mt-3 text-[11px] text-slate-500">
-              *Pesanan akan langsung masuk ke sistem petani dan dapat diambil mandiri menggunakan kode QR pickup.
-            </p>
-
-            <div className="mt-5 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setIsBookingModalOpen(false)}
-                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
-              >
-                Batal
-              </button>
-              <Link
-                href="/umkm/pesanan"
-                className="flex-1 rounded-xl bg-teal-600 py-2.5 text-xs font-black text-white text-center hover:bg-teal-700 transition shadow-xs"
-              >
-                Konfirmasi Pesanan
-              </Link>
-            </div>
-          </div>
+      {/* Loading state indicator */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-white/70 backdrop-blur-2xs flex items-center justify-center z-40">
+          <Loader2 className="h-6 w-6 animate-spin text-teal-600" />
         </div>
       )}
     </div>

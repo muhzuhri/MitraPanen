@@ -1,117 +1,137 @@
 "use client";
 
-import {
-  Wallet,
-  Truck,
-  TrendingDown,
-  ShoppingBag,
-  MapPin,
-  CheckCircle2,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Wallet, ShoppingBag, MapPin, TrendingDown } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+
+interface StatsData {
+  totalBelanja: number;
+  totalPenghematan: number;
+  pesananAktif: number;
+  totalMitraKebun: number;
+}
 
 export default function UmkmStatsCards() {
+  const [stats, setStats] = useState<StatsData>({
+    totalBelanja: 0,
+    totalPenghematan: 0,
+    pesananAktif: 0,
+    totalMitraKebun: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        let totalBelanja = 0;
+        let totalPenghematan = 0;
+        let pesananAktif = 0;
+
+        if (user) {
+          // 1. Ambil pesanan milik UMKM ini
+          const { data: orders } = await supabase
+            .from("pesanan")
+            .select("total_harga, status")
+            .eq("umkm_id", user.id);
+
+          if (orders && orders.length > 0) {
+            orders.forEach((o: any) => {
+              const harga = Number(o.total_harga || 0);
+              if (o.status === "selesai") {
+                totalBelanja += harga;
+                totalPenghematan += Math.round(harga * 0.15); // estimasi hemat vs pasar
+              } else if (o.status !== "dibatalkan") {
+                pesananAktif += 1;
+              }
+            });
+          }
+        }
+
+        // 2. Ambil jumlah kebun petani yang terdaftar
+        const { count: kebunCount } = await supabase
+          .from("kebun")
+          .select("id", { count: "exact", head: true });
+
+        setStats({
+          totalBelanja,
+          totalPenghematan,
+          pesananAktif,
+          totalMitraKebun: kebunCount || 0,
+        });
+      } catch (err) {
+        console.error("Gagal memuat statistik:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadStats();
+  }, []);
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-      {/* KARTU 1: Total Belanja Bulan Ini */}
-      <div className="relative overflow-hidden rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
-        <div className="flex items-start justify-between">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-50 border border-teal-100 text-teal-600 shadow-xs">
-            <Wallet className="h-6 w-6" />
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* 1. Total Belanja */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-slate-500">Total Belanja</span>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
+            <Wallet className="h-4 w-4" />
           </div>
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-800 border border-emerald-200">
-            <TrendingDown className="h-3 w-3 text-emerald-600" />
-            -18% vs Pasar
-          </span>
         </div>
-
-        <div className="mt-4">
-          <p className="text-xs font-bold text-slate-500">
-            Total Belanja Bulan Ini
-          </p>
-          <h3 className="mt-1 text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
-            Rp 4.850.000
-          </h3>
-          <p className="mt-1.5 text-[11px] font-medium text-slate-500 flex items-center gap-1">
-            <span className="text-teal-700 font-bold">140 Kg komoditas segar</span>
-            <span>dari 4 mitra tani</span>
-          </p>
-        </div>
+        <p className="mt-2 text-lg sm:text-xl font-bold tracking-tight text-slate-900">
+          Rp {stats.totalBelanja.toLocaleString("id-ID")}
+        </p>
+        <p className="mt-1 text-[11px] text-slate-400">
+          {stats.totalBelanja > 0 ? "Transaksi selesai" : "Belum ada transaksi"}
+        </p>
       </div>
 
-      {/* KARTU 2: Penghematan Ongkir (Self-Pick Up) */}
-      <div className="relative overflow-hidden rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
-        <div className="flex items-start justify-between">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 shadow-xs">
-            <Truck className="h-6 w-6" />
+      {/* 2. Estimasi Hemat */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-slate-500">Penghematan</span>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+            <TrendingDown className="h-4 w-4" />
           </div>
-          <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2.5 py-1 text-[11px] font-black text-teal-800 border border-teal-200">
-            <CheckCircle2 className="h-3 w-3 text-teal-600" />
-            100% Tanpa Ekspedisi
-          </span>
         </div>
-
-        <div className="mt-4">
-          <p className="text-xs font-bold text-slate-500">
-            Penghematan Ongkir (Self-Pick Up)
-          </p>
-          <h3 className="mt-1 text-2xl sm:text-3xl font-black tracking-tight text-emerald-600">
-            Rp 640.000
-          </h3>
-          <p className="mt-1.5 text-[11px] font-medium text-slate-500 flex items-center gap-1">
-            <span className="text-emerald-700 font-bold">8 trip mandiri</span>
-            <span>rute terpendek GIS</span>
-          </p>
-        </div>
+        <p className="mt-2 text-lg sm:text-xl font-bold tracking-tight text-emerald-600">
+          Rp {stats.totalPenghematan.toLocaleString("id-ID")}
+        </p>
+        <p className="mt-1 text-[11px] text-slate-400">Langsung dari petani</p>
       </div>
 
-      {/* KARTU 3: Pesanan Siap Ambil Hari Ini */}
-      <div className="relative overflow-hidden rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
-        <div className="flex items-start justify-between">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 border border-amber-100 text-amber-600 shadow-xs">
-            <ShoppingBag className="h-6 w-6" />
+      {/* 3. Pesanan Aktif */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-slate-500">Pesanan Aktif</span>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+            <ShoppingBag className="h-4 w-4" />
           </div>
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-black text-amber-800 border border-amber-200 animate-pulse">
-            QR Ready
-          </span>
         </div>
-
-        <div className="mt-4">
-          <p className="text-xs font-bold text-slate-500">
-            Pesanan Siap Ambil Hari Ini
-          </p>
-          <h3 className="mt-1 text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
-            2 Pesanan
-          </h3>
-          <p className="mt-1.5 text-[11px] font-medium text-slate-500 flex items-center gap-1">
-            <span className="text-amber-700 font-bold">Cabai & Tomat</span>
-            <span>est. 15-20 mnt perjalanan</span>
-          </p>
-        </div>
+        <p className="mt-2 text-lg sm:text-xl font-bold tracking-tight text-slate-900">
+          {stats.pesananAktif}
+        </p>
+        <p className="mt-1 text-[11px] text-slate-400">
+          {stats.pesananAktif > 0 ? "Dalam penyiapan" : "Tidak ada pesanan aktif"}
+        </p>
       </div>
 
-      {/* KARTU 4: Rata-Rata Jarak Kebun Mitra */}
-      <div className="relative overflow-hidden rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
-        <div className="flex items-start justify-between">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 border border-sky-100 text-sky-600 shadow-xs">
-            <MapPin className="h-6 w-6" />
+      {/* 4. Mitra Kebun */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-slate-500">Mitra Kebun</span>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50 text-sky-600">
+            <MapPin className="h-4 w-4" />
           </div>
-          <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 text-[11px] font-black text-sky-800 border border-sky-200">
-            Radius Cepat
-          </span>
         </div>
-
-        <div className="mt-4">
-          <p className="text-xs font-bold text-slate-500">
-            Rata-rata Jarak Kebun Mitra
-          </p>
-          <h3 className="mt-1 text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
-            2.1 KM
-          </h3>
-          <p className="mt-1.5 text-[11px] font-medium text-slate-500 flex items-center gap-1">
-            <span className="text-sky-700 font-bold">10 menit berkendara</span>
-            <span>dari dapur Setiabudi</span>
-          </p>
-        </div>
+        <p className="mt-2 text-lg sm:text-xl font-bold tracking-tight text-slate-900">
+          {stats.totalMitraKebun}
+        </p>
+        <p className="mt-1 text-[11px] text-slate-400">Kebun terdaftar di sistem</p>
       </div>
     </div>
   );
